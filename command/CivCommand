@@ -1,0 +1,110 @@
+package com.survivorserver.Civ.command;
+ 
+import java.util.ArrayList;
+import java.util.List;
+ 
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import com.survivorserver.Civ.Civ;
+import com.survivorserver.Civ.lib.SubCommand;
+ 
+ 
+public class CivCommand implements CommandExecutor {
+     
+    Civ civ;
+    private List<SubCommand> executors;
+     
+    public CivCommand(Civ civ) {
+        this.civ = civ;
+        executors = new ArrayList<SubCommand>();
+ 
+        registerSubCommand(new MySettlementCommand (civ));
+        registerSubCommand(new ListSettlementsCommand(civ));
+        registerSubCommand(new InfoCommand(civ));
+        registerSubCommand(new FoundCommand(civ));      
+        registerSubCommand(new JoinCommand(civ));
+        registerSubCommand(new LeaveCommand(civ));
+        registerSubCommand(new InviteCommand(civ));
+        registerSubCommand(new ReviewCommand(civ));
+        registerSubCommand(new SetThreadCommand(civ));
+        registerSubCommand(new SetThemeCommand(civ));
+        registerSubCommand(new TransferCommand(civ));
+        registerSubCommand(new DeleteCommand(civ));
+        registerSubCommand(new BroadcastCommand(civ));
+        registerSubCommand(new ToggleMobs(civ));
+        registerSubCommand(new WaitingCommand(civ));
+        registerSubCommand(new ApproveCommand(civ));
+        registerSubCommand(new DisapproveCommand(civ));
+        registerSubCommand(new RemoveMemberCommand(civ));
+        registerSubCommand(new AddMemberCommand(civ));
+ 
+    }
+     
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String cmdLabel, String[] args) {
+        if (cmdLabel.equalsIgnoreCase("civ") || cmdLabel.equalsIgnoreCase("town")) {
+            if (args.length > 0 && !args[0].equalsIgnoreCase("help") && !args[0].equalsIgnoreCase("?")) {
+                SubCommand sub = findExecutor(args[0]);
+                if (sub != null) {
+                    if (sub.getPermissionNode() == null || sender.hasPermission(sub.getPermissionNode())) {
+                        if (!sub.allowConsoleSender()) {
+                            if (sender instanceof ConsoleCommandSender) {
+                                sender.sendMessage("Player context is required for this command");
+                                return true;
+                            }
+                        }
+                        if (args.length - 1 >= sub.getMinimumArgs()) {
+                            if (sub.onCommand(sender, args)) {
+                                return true;
+                            }
+                        }
+                        for (String help : sub.getHelp()) {
+                            sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6/" + cmdLabel.toLowerCase() + " " + help));
+                        }
+                        return true;
+                    } else {
+                        sender.sendMessage(ChatColor.RED + "You don't have permission for this command");
+                        return true;
+                    }
+                }
+            }
+            for (SubCommand sub : executors) {
+                if (sub.getPermissionNode() == null || sender.hasPermission(sub.getPermissionNode())) {
+                    for (String help : sub.getHelp()) {
+                        sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6/" + cmdLabel.toLowerCase() + " " + help));
+                    }
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+     
+    public void registerSubCommand(SubCommand sub) {
+        executors.add(sub);
+    }
+     
+    public void unregisterSubCommand(SubCommand sub) {
+        executors.remove(sub);
+    }
+     
+    public SubCommand findExecutor(String cmd) {
+        for (SubCommand sub : executors) {
+            if (sub.getCommand().equalsIgnoreCase(cmd)) {
+                return sub;
+            }
+            String[] aliases = sub.getAliases();
+            if (aliases != null) {
+                for (int i = 0; i < aliases.length; i++) {
+                    if (aliases[i].equalsIgnoreCase(cmd)) {
+                        return sub;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+}
